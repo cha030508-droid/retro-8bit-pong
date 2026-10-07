@@ -11,6 +11,16 @@
   const HIT_SPEEDUP = 0.12;
   const HIGH_KEY = "retro-pong-high-score";
   const MUTE_KEY = "retro-pong-muted";
+  const RAINBOW = [
+    "#ff4d4d",
+    "#ff9a3c",
+    "#ffe14d",
+    "#7cff6b",
+    "#4dc4ff",
+    "#6b6bff",
+    "#d45cff",
+  ];
+  const ACCENT_START = 3;
 
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
@@ -45,7 +55,16 @@
     aiOffset: 0,
     serveTimer: 0,
     lastTime: 0,
+    accent: ACCENT_START,
   };
+
+  function accentColor() {
+    return RAINBOW[state.accent];
+  }
+
+  function applyAccent() {
+    document.documentElement.style.setProperty("--accent", accentColor());
+  }
 
   function show(el) {
     el.classList.remove("hidden");
@@ -119,6 +138,8 @@
     state.ball.vy = Math.sin(angle) * BALL_SPEED;
     state.aiOffset = (Math.random() - 0.5) * 16;
     state.serveTimer = 70;
+    state.accent = ACCENT_START;
+    applyAccent();
   }
 
   function startGame(mode) {
@@ -221,6 +242,8 @@
     state.rally += 1;
     els.rally.textContent = String(state.rally);
     state.aiOffset = (Math.random() - 0.5) * 20;
+    state.accent = (state.accent + 1) % RAINBOW.length;
+    applyAccent();
     beep(goingRight ? 480 : 360, 0.05, 0.05);
   }
 
@@ -248,14 +271,7 @@
 
   function updatePlay(dt) {
     const leftDir = (keys.has("s") ? 1 : 0) - (keys.has("w") ? 1 : 0);
-    const yBefore = state.left.y;
     movePaddle(state.left, leftDir, dt);
-    // #region agent log
-    if (keys.size > 0 && (!updatePlay._dbg || Date.now() - updatePlay._dbg > 200)) {
-      updatePlay._dbg = Date.now();
-      fetch('http://127.0.0.1:7636/ingest/17d7fb7e-2bc3-4409-ac94-2e01da8a5e64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'224405'},body:JSON.stringify({sessionId:'224405',runId:'pre-fix',hypothesisId:'B,D',location:'game.js:updatePlay',message:'paddle update',data:{screen:state.screen,mode:state.mode,keys:[...keys],leftDir,yBefore,yAfter:state.left.y,dt,hasW:keys.has('w'),hasS:keys.has('s')},timestamp:Date.now()})}).catch(()=>{});
-    }
-    // #endregion
 
     if (state.mode === "2p") {
       const rightDir =
@@ -317,7 +333,7 @@
 
   function drawPlay() {
     drawCourt();
-    ctx.fillStyle = "#e8f0e0";
+    ctx.fillStyle = accentColor();
     ctx.fillRect(12, Math.round(state.left.y), PADDLE_W, PADDLE_H);
     ctx.fillRect(W - 16, Math.round(state.right.y), PADDLE_W, PADDLE_H);
     ctx.fillRect(
@@ -342,9 +358,6 @@
 
   window.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
-    // #region agent log
-    fetch('http://127.0.0.1:7636/ingest/17d7fb7e-2bc3-4409-ac94-2e01da8a5e64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'224405'},body:JSON.stringify({sessionId:'224405',runId:'pre-fix',hypothesisId:'A,E',location:'game.js:keydown',message:'keydown',data:{key,rawKey:event.key,code:event.code,repeat:event.repeat,isComposing:event.isComposing,screen:state.screen,keysAfter:[...keys,key]},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (
       [
         "arrowup",
@@ -360,6 +373,8 @@
       event.preventDefault();
     }
     keys.add(key);
+    if (event.code === "KeyW") keys.add("w");
+    if (event.code === "KeyS") keys.add("s");
 
     if (["arrowup", "arrowdown", "enter", " "].includes(key)) ensureAudio();
 
@@ -392,11 +407,9 @@
   });
 
   window.addEventListener("keyup", (event) => {
-    const upKey = event.key.toLowerCase();
-    // #region agent log
-    fetch('http://127.0.0.1:7636/ingest/17d7fb7e-2bc3-4409-ac94-2e01da8a5e64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'224405'},body:JSON.stringify({sessionId:'224405',runId:'pre-fix',hypothesisId:'C',location:'game.js:keyup',message:'keyup',data:{upKey,rawKey:event.key,code:event.code,keysBefore:[...keys],hadStored:keys.has(upKey)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    keys.delete(upKey);
+    keys.delete(event.key.toLowerCase());
+    if (event.code === "KeyW") keys.delete("w");
+    if (event.code === "KeyS") keys.delete("s");
   });
 
   document.querySelectorAll(".menu-item").forEach((button) => {
@@ -413,6 +426,7 @@
 
   updateMuteLabels();
   updateHighScoreDisplay();
+  applyAccent();
   setScreen("menu");
   requestAnimationFrame((now) => {
     state.lastTime = now;

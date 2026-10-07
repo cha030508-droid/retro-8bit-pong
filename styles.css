@@ -2,7 +2,7 @@
   --bg: #050805;
   --fg: #e8f0e0;
   --dim: #5a6a52;
-  --green: #7cff6b;
+  --accent: #7cff6b;
 }
 
 * {
@@ -34,7 +34,8 @@ body {
   width: min(96vw, 960px);
   height: min(72vw, 720px);
   background: var(--bg);
-  box-shadow: 0 0 0 4px #111, 0 0 0 8px #2a2a2a, 0 0 40px #143010;
+  box-shadow: 0 0 0 4px #111, 0 0 0 8px #2a2a2a,
+    0 0 40px color-mix(in srgb, var(--accent) 35%, transparent);
   overflow: hidden;
 }
 
@@ -80,15 +81,15 @@ canvas {
 }
 
 h1 {
-  color: var(--green);
+  color: var(--accent);
   font-size: clamp(28px, 6vw, 56px);
   letter-spacing: 8px;
-  text-shadow: 4px 4px 0 #143010;
+  text-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 25%, #000);
   margin-bottom: 12px;
 }
 
 h2 {
-  color: var(--green);
+  color: var(--accent);
   font-size: clamp(16px, 3vw, 28px);
   letter-spacing: 4px;
 }
@@ -112,8 +113,8 @@ nav {
 
 .menu-item.selected,
 .menu-item:hover {
-  border-color: var(--green);
-  color: var(--green);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .high-score,
@@ -126,7 +127,7 @@ nav {
 }
 
 .record {
-  color: var(--green);
+  color: var(--accent);
 }
 
 .hud {
@@ -135,7 +136,7 @@ nav {
 }
 
 .hud .rally {
-  color: var(--fg);
+  color: var(--accent);
   font-size: 12px;
 }
 
