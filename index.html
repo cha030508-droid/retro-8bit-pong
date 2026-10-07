@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PONG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="crt">
+      <div class="screen">
+        <canvas id="game" width="320" height="240" aria-label="Ping pong game"></canvas>
+        <div class="scanlines" aria-hidden="true"></div>
+
+        <section id="menu" class="overlay" aria-label="Title menu">
+          <h1>PONG</h1>
+          <nav>
+            <button type="button" class="menu-item selected" data-action="1p">
+              1 PLAYER
+            </button>
+            <button type="button" class="menu-item" data-action="2p">
+              2 PLAYER
+            </button>
+            <button type="button" class="menu-item" data-action="mute" id="menu-mute">
+              SOUND: ON
+            </button>
+          </nav>
+          <p class="high-score">HIGH SCORE <span id="menu-high">0</span></p>
+          <p class="hint">ARROWS + ENTER</p>
+        </section>
+
+        <section id="hud" class="hud hidden" aria-live="polite">
+          <p class="rally">RALLY <span id="rally">0</span></p>
+          <p id="ready" class="hint hidden">GET READY</p>
+          <p class="hint">ESC PAUSE</p>
+        </section>
+
+        <section id="pause" class="overlay hidden" aria-label="Paused">
+          <h2>PAUSED</h2>
+          <nav>
+            <button type="button" class="menu-item selected" data-action="resume">
+              RESUME
+            </button>
+            <button type="button" class="menu-item" data-action="new">
+              NEW GAME
+            </button>
+            <button type="button" class="menu-item" data-action="mute" id="pause-mute">
+              SOUND: ON
+            </button>
+          </nav>
+        </section>
+
+        <section id="gameover" class="overlay hidden" aria-label="Game over">
+          <h2 id="over-title">YOU LOSE</h2>
+          <p class="rally">RALLY <span id="over-rally">0</span></p>
+          <p id="over-record" class="record hidden">NEW HIGH SCORE</p>
+          <nav>
+            <button type="button" class="menu-item selected" data-action="new">
+              NEW GAME
+            </button>
+          </nav>
+          <p class="hint">ENTER</p>
+        </section>
+      </div>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>
