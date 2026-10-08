@@ -1,7 +1,7 @@
 :root {
-  --bg: #050805;
-  --fg: #e8f0e0;
-  --dim: #5a6a52;
+  --bg: #000;
+  --fg: #f5f5f5;
+  --dim: #8a8a8a;
   --accent: #7cff6b;
 }
 
@@ -34,8 +34,7 @@ body {
   width: min(96vw, 960px);
   height: min(72vw, 720px);
   background: var(--bg);
-  box-shadow: 0 0 0 4px #111, 0 0 0 8px #2a2a2a,
-    0 0 40px color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 8px #111;
   overflow: hidden;
 }
 
@@ -140,7 +139,38 @@ nav {
   font-size: 12px;
 }
 
-.overlay.hidden,
-.hud.hidden {
-  display: none;
+.hud-controls {
+  font-size: 7px;
+  letter-spacing: 1px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.corner-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 5;
+  font-family: inherit;
+  font-size: 6px;
+  letter-spacing: 1px;
+  color: var(--fg);
+  background: #000;
+  border: 1px solid #fff;
+  padding: 6px 7px;
+  cursor: pointer;
+}
+
+.corner-btn:hover {
+  color: #000;
+  background: #fff;
+}
+
+.corner-btn-tl {
+  left: 10px;
+  top: 10px;
+  right: auto;
+  bottom: auto;
 }

@@ -7,10 +7,14 @@
   const PADDLE_SPEED = 2.6;
   const AI_SPEED = 1.85;
   const BALL_SPEED = 1.7;
-  const BALL_SPEED_CAP = 4.2;
+  const BALL_SPEED_CAP = 6.4;
   const HIT_SPEEDUP = 0.12;
+  const MILESTONE = 10;
+  const MILESTONE_BOOST = 0.45;
   const HIGH_KEY = "retro-pong-high-score";
   const MUTE_KEY = "retro-pong-muted";
+  const CONTROLS_KEY = "retro-pong-1p-keys";
+  const TWO_BALL_KEY = "retro-pong-two-ball";
   const RAINBOW = [
     "#ff4d4d",
     "#ff9a3c",
@@ -38,12 +42,17 @@
     menuMute: document.getElementById("menu-mute"),
     pauseMute: document.getElementById("pause-mute"),
     ready: document.getElementById("ready"),
+    controls: document.getElementById("controls"),
+    twoball: document.getElementById("twoball"),
   };
 
   const keys = new Set();
   let audioCtx = null;
   let muted = localStorage.getItem(MUTE_KEY) === "1";
   let highScore = Number(localStorage.getItem(HIGH_KEY) || 0);
+  let onePlayerKeys =
+    localStorage.getItem(CONTROLS_KEY) === "arrows" ? "arrows" : "ws";
+  let twoBalls = localStorage.getItem(TWO_BALL_KEY) === "1";
 
   const state = {
     screen: "menu",
@@ -51,7 +60,7 @@
     rally: 0,
     left: { y: (H - PADDLE_H) / 2 },
     right: { y: (H - PADDLE_H) / 2 },
-    ball: { x: W / 2, y: H / 2, vx: BALL_SPEED, vy: 0.6 },
+    balls: [],
     aiOffset: 0,
     serveTimer: 0,
     lastTime: 0,
@@ -87,6 +96,11 @@
       show(els.pause);
     }
     if (name === "over") show(els.gameover);
+    if ((name === "play" || name === "pause") && state.mode === "1p") {
+      show(els.controls);
+    } else {
+      hide(els.controls);
+    }
   }
 
   function updateMuteLabels() {
@@ -99,21 +113,56 @@
     els.menuHigh.textContent = String(highScore);
   }
 
-  function ensureAudio() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function updateControlsLabel() {
+    els.controls.textContent =
+      onePlayerKeys === "arrows" ? "KEYS: ARROWS" : "KEYS: W/S";
+  }
+
+  function updateTwoBallLabel() {
+    els.twoball.textContent = twoBalls ? "TWO BALL: ON" : "TWO BALL: OFF";
+  }
+
+  function toggleTwoBalls() {
+    twoBalls = !twoBalls;
+    localStorage.setItem(TWO_BALL_KEY, twoBalls ? "1" : "0");
+    updateTwoBallLabel();
+    beep(520, 0.05, 0.04);
+  }
+
+  function toggleOnePlayerKeys() {
+    onePlayerKeys = onePlayerKeys === "ws" ? "arrows" : "ws";
+    localStorage.setItem(CONTROLS_KEY, onePlayerKeys);
+    updateControlsLabel();
+    beep(520, 0.05, 0.04);
+  }
+
+  function playerDir(scheme) {
+    if (scheme === "arrows") {
+      return (keys.has("arrowdown") ? 1 : 0) - (keys.has("arrowup") ? 1 : 0);
     }
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    return (keys.has("s") ? 1 : 0) - (keys.has("w") ? 1 : 0);
+  }
+
+  function ensureAudio() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch (err) {
+      /* audio optional */
+    }
   }
 
   function beep(freq, duration, volume) {
     if (muted) return;
     ensureAudio();
+    if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = "square";
     osc.frequency.value = freq;
-    gain.gain.value = volume ?? 0.05;
+    gain.gain.value = volume == null ? 0.05 : volume;
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start();
@@ -124,18 +173,29 @@
     return Math.max(min, Math.min(max, v));
   }
 
+  function serveBall(dir, y) {
+    const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
+    const ball = {
+      x: W / 2 - BALL / 2,
+      y,
+      vx: Math.cos(angle) * BALL_SPEED * dir,
+      vy: Math.sin(angle) * BALL_SPEED,
+    };
+    if (Math.abs(ball.vx) < 1.2) ball.vx = 1.2 * dir;
+    return ball;
+  }
+
   function resetRally() {
     state.rally = 0;
     els.rally.textContent = "0";
     state.left.y = (H - PADDLE_H) / 2;
     state.right.y = (H - PADDLE_H) / 2;
-    const dir = Math.random() < 0.5 ? 1 : -1;
-    const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
-    state.ball.x = W / 2 - BALL / 2;
-    state.ball.y = H / 2 - BALL / 2;
-    state.ball.vx = Math.cos(angle) * BALL_SPEED * dir;
-    if (Math.abs(state.ball.vx) < 1.2) state.ball.vx = 1.2 * dir;
-    state.ball.vy = Math.sin(angle) * BALL_SPEED;
+    if (twoBalls) {
+      state.balls = [serveBall(-1, H / 2 - 36), serveBall(1, H / 2 + 32)];
+    } else {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      state.balls = [serveBall(dir, H / 2 - BALL / 2)];
+    }
     state.aiOffset = (Math.random() - 0.5) * 16;
     state.serveTimer = 70;
     state.accent = ACCENT_START;
@@ -203,18 +263,25 @@
       updateHighScoreDisplay();
       beep(180, 0.08, 0.04);
     }
+    if (action === "controls") toggleOnePlayerKeys();
   }
 
   function movePaddle(paddle, dir, dt) {
-    paddle.y = clamp(paddle.y + dir * PADDLE_SPEED * dt, 8, H - PADDLE_H - 8);
+    paddle.y = clamp(paddle.y + dir * PADDLE_SPEED * dt, 4, H - PADDLE_H - 4);
+  }
+
+  function chaseBall() {
+    const incoming = state.balls.filter((ball) => ball.vx < 0);
+    const pool = incoming.length ? incoming : state.balls;
+    return pool.reduce((closest, ball) => (ball.x < closest.x ? ball : closest));
   }
 
   function updateAI(dt) {
-    const target = state.ball.y + BALL / 2 - PADDLE_H / 2 + state.aiOffset;
-    const center = state.right.y;
-    const diff = target - center;
+    const ball = chaseBall();
+    const target = ball.y + BALL / 2 - PADDLE_H / 2 + state.aiOffset;
+    const diff = target - state.left.y;
     const step = clamp(diff, -AI_SPEED * dt, AI_SPEED * dt);
-    state.right.y = clamp(state.right.y + step, 8, H - PADDLE_H - 8);
+    state.left.y = clamp(state.left.y + step, 4, H - PADDLE_H - 4);
   }
 
   function paddleHit(paddleX, paddleY, ball) {
@@ -226,21 +293,45 @@
     );
   }
 
-  function bounceOffPaddle(paddleY, goingRight) {
-    const ballCenter = state.ball.y + BALL / 2;
+  function setBallSpeed(ball, speed, dirX) {
+    const angle = Math.atan2(ball.vy, ball.vx);
+    const dir = dirX == null ? Math.sign(ball.vx) || 1 : dirX;
+    ball.vx = Math.cos(angle) * speed;
+    ball.vy = Math.sin(angle) * speed;
+    if (Math.sign(ball.vx) !== dir) {
+      ball.vx = Math.abs(ball.vx) * dir;
+    }
+  }
+
+  function boostAllBalls(amount) {
+    for (const ball of state.balls) {
+      const speed = Math.min(
+        Math.hypot(ball.vx, ball.vy) + amount,
+        BALL_SPEED_CAP
+      );
+      setBallSpeed(ball, speed);
+    }
+  }
+
+  function bounceOffPaddle(ball, paddleY, goingRight) {
+    const ballCenter = ball.y + BALL / 2;
     const paddleCenter = paddleY + PADDLE_H / 2;
     const offset = (ballCenter - paddleCenter) / (PADDLE_H / 2);
-    const speed = Math.min(
-      Math.hypot(state.ball.vx, state.ball.vy) + HIT_SPEEDUP,
+    let speed = Math.min(
+      Math.hypot(ball.vx, ball.vy) + HIT_SPEEDUP,
       BALL_SPEED_CAP
     );
     const angle = offset * 0.7;
     const dir = goingRight ? 1 : -1;
-    state.ball.vx = Math.cos(angle) * speed * dir;
-    state.ball.vy = Math.sin(angle) * speed;
-    if (Math.abs(state.ball.vx) < 1.1) state.ball.vx = 1.1 * dir;
+    ball.vx = Math.cos(angle) * speed * dir;
+    ball.vy = Math.sin(angle) * speed;
+    if (Math.abs(ball.vx) < 1.1) ball.vx = 1.1 * dir;
     state.rally += 1;
     els.rally.textContent = String(state.rally);
+    if (state.rally % MILESTONE === 0) {
+      boostAllBalls(MILESTONE_BOOST);
+      beep(720, 0.08, 0.06);
+    }
     state.aiOffset = (Math.random() - 0.5) * 20;
     state.accent = (state.accent + 1) % RAINBOW.length;
     applyAccent();
@@ -250,7 +341,7 @@
   function endGame(missedSide) {
     let title;
     if (state.mode === "1p") {
-      title = missedSide === "left" ? "YOU LOSE" : "YOU WIN";
+      title = missedSide === "right" ? "YOU LOSE" : "YOU WIN";
     } else {
       title = missedSide === "left" ? "PLAYER 2 WINS" : "PLAYER 1 WINS";
     }
@@ -266,19 +357,16 @@
     els.overRally.textContent = String(state.rally);
     els.overRecord.classList.toggle("hidden", !isRecord);
     setScreen("over");
-    beep(missedSide === "left" && state.mode === "1p" ? 140 : 620, 0.18, 0.06);
+    beep(missedSide === "right" && state.mode === "1p" ? 140 : 620, 0.18, 0.06);
   }
 
   function updatePlay(dt) {
-    const leftDir = (keys.has("s") ? 1 : 0) - (keys.has("w") ? 1 : 0);
-    movePaddle(state.left, leftDir, dt);
-
     if (state.mode === "2p") {
-      const rightDir =
-        (keys.has("arrowdown") ? 1 : 0) - (keys.has("arrowup") ? 1 : 0);
-      movePaddle(state.right, rightDir, dt);
-    } else if (state.serveTimer <= 0) {
-      updateAI(dt);
+      movePaddle(state.left, playerDir("ws"), dt);
+      movePaddle(state.right, playerDir("arrows"), dt);
+    } else {
+      movePaddle(state.right, playerDir(onePlayerKeys), dt);
+      if (state.serveTimer <= 0) updateAI(dt);
     }
 
     if (state.serveTimer > 0) {
@@ -286,47 +374,52 @@
       return;
     }
 
-    state.ball.x += state.ball.vx * dt;
-    state.ball.y += state.ball.vy * dt;
-
-    if (state.ball.y <= 8) {
-      state.ball.y = 8;
-      state.ball.vy *= -1;
-      beep(200, 0.03, 0.03);
-    }
-    if (state.ball.y + BALL >= H - 8) {
-      state.ball.y = H - 8 - BALL;
-      state.ball.vy *= -1;
-      beep(200, 0.03, 0.03);
-    }
-
     const leftX = 12;
     const rightX = W - 12 - PADDLE_W;
 
-    if (state.ball.vx < 0 && paddleHit(leftX, state.left.y, state.ball)) {
-      state.ball.x = leftX + PADDLE_W;
-      bounceOffPaddle(state.left.y, true);
-    } else if (
-      state.ball.vx > 0 &&
-      paddleHit(rightX, state.right.y, state.ball)
-    ) {
-      state.ball.x = rightX - BALL;
-      bounceOffPaddle(state.right.y, false);
-    }
+    for (const ball of state.balls) {
+      ball.x += ball.vx * dt;
+      ball.y += ball.vy * dt;
 
-    if (state.ball.x + BALL < 0) endGame("left");
-    else if (state.ball.x > W) endGame("right");
+      if (ball.y <= 4) {
+        ball.y = 4;
+        ball.vy *= -1;
+        beep(200, 0.03, 0.03);
+      }
+      if (ball.y + BALL >= H - 4) {
+        ball.y = H - 4 - BALL;
+        ball.vy *= -1;
+        beep(200, 0.03, 0.03);
+      }
+
+      if (ball.vx < 0 && paddleHit(leftX, state.left.y, ball)) {
+        ball.x = leftX + PADDLE_W;
+        bounceOffPaddle(ball, state.left.y, true);
+      } else if (ball.vx > 0 && paddleHit(rightX, state.right.y, ball)) {
+        ball.x = rightX - BALL;
+        bounceOffPaddle(ball, state.right.y, false);
+      }
+
+      if (ball.x + BALL < 0) {
+        endGame("left");
+        return;
+      }
+      if (ball.x > W) {
+        endGame("right");
+        return;
+      }
+    }
   }
 
   function drawCourt() {
-    ctx.fillStyle = "#050805";
+    ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#1c2818";
-    ctx.fillRect(0, 0, W, 8);
-    ctx.fillRect(0, H - 8, W, 8);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, W, 4);
+    ctx.fillRect(0, H - 4, W, 4);
 
-    ctx.fillStyle = "#3a4a34";
-    for (let y = 12; y < H - 12; y += 10) {
+    ctx.fillStyle = "#fff";
+    for (let y = 10; y < H - 10; y += 10) {
       ctx.fillRect(W / 2 - 1, y, 2, 5);
     }
   }
@@ -336,12 +429,9 @@
     ctx.fillStyle = accentColor();
     ctx.fillRect(12, Math.round(state.left.y), PADDLE_W, PADDLE_H);
     ctx.fillRect(W - 16, Math.round(state.right.y), PADDLE_W, PADDLE_H);
-    ctx.fillRect(
-      Math.round(state.ball.x),
-      Math.round(state.ball.y),
-      BALL,
-      BALL
-    );
+    for (const ball of state.balls) {
+      ctx.fillRect(Math.round(ball.x), Math.round(ball.y), BALL, BALL);
+    }
   }
 
   function loop(now) {
@@ -350,6 +440,8 @@
     if (state.screen === "play") updatePlay(dt);
     if (state.screen === "play") {
       els.ready.classList.toggle("hidden", state.serveTimer <= 0);
+    } else {
+      els.ready.classList.add("hidden");
     }
     if (state.screen === "menu") drawCourt();
     else drawPlay();
@@ -412,6 +504,15 @@
     if (event.code === "KeyS") keys.delete("s");
   });
 
+  els.controls.addEventListener("click", () => {
+    ensureAudio();
+    toggleOnePlayerKeys();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("#twoball")) toggleTwoBalls();
+  });
+
   document.querySelectorAll(".menu-item").forEach((button) => {
     button.addEventListener("mouseenter", () => {
       const overlay = button.closest(".overlay");
@@ -426,6 +527,8 @@
 
   updateMuteLabels();
   updateHighScoreDisplay();
+  updateControlsLabel();
+  updateTwoBallLabel();
   applyAccent();
   setScreen("menu");
   requestAnimationFrame((now) => {

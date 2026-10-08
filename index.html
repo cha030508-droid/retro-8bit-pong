@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=7" />
   </head>
   <body>
     <main class="crt">
@@ -32,14 +32,20 @@
             </button>
           </nav>
           <p class="high-score">HIGH SCORE <span id="menu-high">0</span></p>
-          <p class="hint">ARROWS + ENTER</p>
+          <button type="button" id="twoball" class="corner-btn corner-btn-tl">
+            TWO BALL: OFF
+          </button>
         </section>
 
         <section id="hud" class="hud hidden" aria-live="polite">
           <p class="rally">RALLY <span id="rally">0</span></p>
           <p id="ready" class="hint hidden">GET READY</p>
-          <p class="hint">ESC PAUSE</p>
+          <p class="hint hud-controls">ESC TO PAUSE</p>
         </section>
+
+        <button type="button" id="controls" class="corner-btn hidden">
+          KEYS: W/S
+        </button>
 
         <section id="pause" class="overlay hidden" aria-label="Paused">
           <h2>PAUSED</h2>
@@ -65,10 +71,9 @@
               NEW GAME
             </button>
           </nav>
-          <p class="hint">ENTER</p>
         </section>
       </div>
     </main>
-    <script src="game.js"></script>
+    <script src="game.js?v=15"></script>
   </body>
 </html>
