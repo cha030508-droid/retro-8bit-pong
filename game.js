@@ -198,8 +198,6 @@
     }
     state.aiOffset = (Math.random() - 0.5) * 16;
     state.serveTimer = 70;
-    state.accent = ACCENT_START;
-    applyAccent();
   }
 
   function startGame(mode) {
